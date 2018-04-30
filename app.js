@@ -2,12 +2,17 @@
 var vertexShaderText = 
 [
 'precision mediump float;',
-'attribute vec2 vertPosition;',
+'attribute vec3 vertPosition;',
 'attribute vec3 vertColor;',
 'varying vec3 fragColor;',
+'uniform mat4 mWorld;',
+'uniform mat4 mView;',
+'uniform mat4 mProj;',
 'void main(){',
 	'fragColor = vertColor;',
-	'gl_Position = vec4(vertPosition, 0.0, 1.0);',
+	'gl_Position = mProj * mView * mWorld * vec4(vertPosition, 1.0);',
+	//primero va a multiplicar el ultimo termino por la mWorld, que se encargara de rotar
+	//despues por la view que es la matriz que se crea al aplicar la camara
 '}'
 ].join('\n');
 
@@ -49,7 +54,7 @@ var InitDemo = function(){
 
 	gl.compileShader(vertexShader);
 	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)){
-		console.error('ERROR compiling vertex shader! :(', gl.getShaderInfoLog());
+		console.error('ERROR compiling vertex shader! :(', gl.getShaderInfoLog(vertexShader));
 		return;
 	}
 	gl.compileShader(fragmentShader);
@@ -76,10 +81,10 @@ var InitDemo = function(){
 	// ahora tenemos que decirle a la tarjeta gráfica cuales son los 
 	// vertices que vamos a querer dibujar, con los colores que queremos en cada vertice
 	var triangleVertices= 
-	[	// X Y       R    G    B
-		0.0,0.5,	1.0, 1.0, 0.0,
-		-0.5,-0.5,  0.7, 0.0, 1.0,
-		0.5,-0.5,   0.1, 1.0, 0.6
+	[	// X Y Z         R    G    B
+		 0.0, 0.5,0.0,  1.0, 1.0, 0.0,
+		-0.5,-0.5,0.0,  0.7, 0.0, 1.0,
+		 0.5,-0.5,0.0,  0.1, 1.0, 0.6
 	];
 	// esto de abajo le esta diciendo que estos valores van a pasar a la tarjeta gráfica
 	var triangleVertexBufferObject = gl.createBuffer();
@@ -92,7 +97,7 @@ var InitDemo = function(){
 	var colorAttribLocation = gl.getAttribLocation(program, 'vertColor');
 	gl.vertexAttribPointer(
 		positionAttribLocation, // attribute location
-		2, // numero de elementos por attribute
+		3, // numero de elementos por attribute 3 por que es 
 		gl.FLOAT, // typo de elemetos
 		gl.FALSE,
 		5 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
@@ -104,19 +109,32 @@ var InitDemo = function(){
 		3, // numero de elementos por attribute
 		gl.FLOAT, // typo de elemetos
 		gl.FALSE,
-		5 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
-		2 * Float32Array.BYTES_PER_ELEMENT // Offset of the beggining of a single vertex to this attribute
+		6 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
+		3 * Float32Array.BYTES_PER_ELEMENT // Offset of the beggining of a single vertex to this attribute
 	);
 	gl.enableVertexAttribArray(positionAttribLocation);
 	gl.enableVertexAttribArray(colorAttribLocation);
 
+	var matWorldUniformLocation = gl.getUniformLocation(program, 'mWorld');
+	var matViewUniformLocation = gl.getUniformLocation(program, 'mView');
+	var matProjUniformLocation = gl.getUniformLocation(program, 'mProj');
+
+	var projMatrix = new Float32Array(16);
+	var viewMatrix = new Float32Array(16);
+	var worldMatrix = new Float32Array(16);
+
+	mat4.identity(projMatrix);
+	mat4.identity(viewMatrix);
+	mat4.identity(worldMatrix);
+
+	// seteamos todas a la identidad
+	
 	// var loop = function(){
 	// 	updateWorld();
 	// 	renderWorld();
 	// 	if(running)
 	// }
 	gl.useProgram(program);
-	// esta funcion necesita 3 parametros
-	// 
+	// esta funcion necesita 3 parametros que le dicen como tiene que dibujar
 	gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
