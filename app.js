@@ -100,7 +100,7 @@ var InitDemo = function(){
 		3, // numero de elementos por attribute 3 por que es 
 		gl.FLOAT, // typo de elemetos
 		gl.FALSE,
-		5 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
+		6 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
 		0 // Offset of the beggining of a single vertex to this attribute
 	);
 
@@ -115,26 +115,55 @@ var InitDemo = function(){
 	gl.enableVertexAttribArray(positionAttribLocation);
 	gl.enableVertexAttribArray(colorAttribLocation);
 
+	// le decimos a webgl que queremos usar ese programa(que se guarda en una variable)
+	gl.useProgram(program);
+
+
 	var matWorldUniformLocation = gl.getUniformLocation(program, 'mWorld');
 	var matViewUniformLocation = gl.getUniformLocation(program, 'mView');
 	var matProjUniformLocation = gl.getUniformLocation(program, 'mProj');
 
-	var projMatrix = new Float32Array(16);
-	var viewMatrix = new Float32Array(16);
 	var worldMatrix = new Float32Array(16);
+	var viewMatrix = new Float32Array(16);
+	var projMatrix = new Float32Array(16);
 
-	mat4.identity(projMatrix);
-	mat4.identity(viewMatrix);
 	mat4.identity(worldMatrix);
+
+	mat4.lookAt(viewMatrix, [0,0,-2], [0,0,0], [0,1,0]); 
+	// 1- donde esta el que mira (ORIGEN)
+	// 2- a donde mira (VECTOR DESINO)
+	// 3- vector unitario ¿? (ni idea...)
+
+	mat4.perspective(projMatrix, glMatrix.toRadian(45), canvas.width / canvas.height, 0.1, 1000.0);
+	// 1 la salida por callback
+	// 2- el campo de vision vertical
+	// 3- Aspect ratio ¿?
+	// extremo de cercania
+	// extremo de lejania ¿? creo
+	
 
 	// seteamos todas a la identidad
 	
-	// var loop = function(){
-	// 	updateWorld();
-	// 	renderWorld();
-	// 	if(running)
-	// }
-	gl.useProgram(program);
+	gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
+	gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, viewMatrix);
+	gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, projMatrix);
+
+	//Main render loop
+	// esto se encarga de mover la escena y actualizarla para formar los fotogramas
+	var identityMatrix = new Float32Array(16);
+	mat4.identity(identityMatrix);
+	var angle = 0;
+	var loop = function(){
+		angle = performance.now() / 1000 / 6 * 2 * Math.PI;
+		mat4.rotate(worldMatrix, identityMatrix, angle, [0,1,0]); // el ultimo parametro quiere decir que será en el eje de la Y
+		gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
+		// esto es necesario siempre que queramos actualizar variables de los shaders
+
+		gl.clearColor(0.75,0.85,0.8,1.0);
+		gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+		gl.drawArrays(gl.TRIANGLES, 0, 3);
+		requestAnimationFrame(loop);
+	};
+	requestAnimationFrame(loop);
 	// esta funcion necesita 3 parametros que le dicen como tiene que dibujar
-	gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
