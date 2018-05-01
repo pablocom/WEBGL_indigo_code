@@ -3,13 +3,13 @@ var vertexShaderText =
 [
 'precision mediump float;',
 'attribute vec3 vertPosition;',
-'attribute vec3 vertColor;',
-'varying vec3 fragColor;',
+'attribute vec2 vertTextCoord;',
+'varying vec2 fragTextCoord;',
 'uniform mat4 mWorld;',
 'uniform mat4 mView;',
 'uniform mat4 mProj;',
 'void main(){',
-	'fragColor = vertColor;',
+	'fragTextCoord = vertTextCoord;',
 	'gl_Position = mProj * mView * mWorld * vec4(vertPosition, 1.0);',
 	//primero va a multiplicar el ultimo termino por la mWorld, que se encargara de rotar
 	//despues por la view que es la matriz que se crea al aplicar la camara
@@ -18,9 +18,10 @@ var vertexShaderText =
 
 var fragmentShaderText = [
 	'precision mediump float;',
-	'varying vec3 fragColor;',
+	'varying vec2 fragTextCoord;',
+	'uniform sampler2D sampler;', // esto es para especificar sobre la textura
 	'void main(){',
-		'gl_FragColor = vec4(fragColor, 1.0);',
+		'gl_FragColor = texture2D(sampler, fragTextCoord);',
 	'}'
 ].join('\n');
 
@@ -68,7 +69,7 @@ var InitDemo = function(){
 	}
 	gl.compileShader(fragmentShader);
 	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-		console.error('ERROR compiling fragment shader! :(');
+		console.error('ERROR compiling fragment shader! :(', gl.getShaderInfoLog(fragmentShader));
 		return;
 	}
 
@@ -90,42 +91,42 @@ var InitDemo = function(){
 	// ahora tenemos que decirle a la tarjeta gráfica cuales son los 
 	// vertices que vamos a querer dibujar, con los colores que queremos en cada vertice
 	var boxVertices= 
-	[	// X Y Z         R    G    B
+	[	// X Y Z            U , V esto define las esquinas
 		// Top
-		-1.0, 1.0, -1.0,   0.5, 0.5, 0.5,
-		-1.0, 1.0, 1.0,    0.5, 0.5, 0.5,
-		1.0, 1.0, 1.0,     0.5, 0.5, 0.5,
-		1.0, 1.0, -1.0,    0.5, 0.5, 0.5,
+		-1.0, 1.0, -1.0,   0, 0,
+		-1.0, 1.0, 1.0,    0, 1,
+		1.0, 1.0, 1.0,     1, 1,
+		1.0, 1.0, -1.0,    1, 0,
 
 		// Left
-		-1.0, 1.0, 1.0,    0.75, 0.25, 0.5,
-		-1.0, -1.0, 1.0,   0.75, 0.25, 0.5,
-		-1.0, -1.0, -1.0,  0.75, 0.25, 0.5,
-		-1.0, 1.0, -1.0,   0.75, 0.25, 0.5,
+		-1.0, 1.0, 1.0,    0, 0,
+		-1.0, -1.0, 1.0,   0, 1,
+		-1.0, -1.0, -1.0,  1, 1,
+		-1.0, 1.0, -1.0,   1, 0,
 
 		// Right
-		1.0, 1.0, 1.0,    0.25, 0.25, 0.75,
-		1.0, -1.0, 1.0,   0.25, 0.25, 0.75,
-		1.0, -1.0, -1.0,  0.25, 0.25, 0.75,
-		1.0, 1.0, -1.0,   0.25, 0.25, 0.75,
+		1.0, 1.0, 1.0,     0, 0,
+		1.0, -1.0, 1.0,    0, 1,
+		1.0, -1.0, -1.0,   1, 1,
+		1.0, 1.0, -1.0,    1, 0,
 
 		// Front
-		1.0, 1.0, 1.0,    1.0, 0.0, 0.15,
-		1.0, -1.0, 1.0,    1.0, 0.0, 0.15,
-		-1.0, -1.0, 1.0,    1.0, 0.0, 0.15,
-		-1.0, 1.0, 1.0,    1.0, 0.0, 0.15,
+		1.0, 1.0, 1.0,     0, 0,
+		1.0, -1.0, 1.0,    0, 1,
+		-1.0, -1.0, 1.0,   1, 1,
+		-1.0, 1.0, 1.0,    1, 0,
 
 		// Back
-		1.0, 1.0, -1.0,    0.0, 1.0, 0.15,
-		1.0, -1.0, -1.0,    0.0, 1.0, 0.15,
-		-1.0, -1.0, -1.0,    0.0, 1.0, 0.15,
-		-1.0, 1.0, -1.0,    0.0, 1.0, 0.15,
+		1.0, 1.0, -1.0,    0, 0,
+		1.0, -1.0, -1.0,    0, 1,
+		-1.0, -1.0, -1.0,    1, 1,
+		-1.0, 1.0, -1.0,    1, 0,
 
 		// Bottom
-		-1.0, -1.0, -1.0,   0.5, 0.5, 1.0,
-		-1.0, -1.0, 1.0,    0.5, 0.5, 1.0,
-		1.0, -1.0, 1.0,     0.5, 0.5, 1.0,
-		1.0, -1.0, -1.0,    0.5, 0.5, 1.0
+		-1.0, -1.0, -1.0,   0, 0,
+		-1.0, -1.0, 1.0,    0, 1,
+		1.0, -1.0, 1.0,     1, 1,
+		1.0, -1.0, -1.0,    1, 0,
 	];
 	var boxIndices =
 	[
@@ -165,26 +166,39 @@ var InitDemo = function(){
 
 	// despues de esto tenemos que pasar las variables al vertex shader
 	var positionAttribLocation = gl.getAttribLocation(program, 'vertPosition');
-	var colorAttribLocation = gl.getAttribLocation(program, 'vertColor');
+	var textCoordAttribLocation = gl.getAttribLocation(program, 'vertTextCoord');
 	gl.vertexAttribPointer(
 		positionAttribLocation, // attribute location
 		3, // numero de elementos por attribute 3 por que es 
 		gl.FLOAT, // typo de elemetos
 		gl.FALSE,
-		6 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
+		5 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
 		0 // Offset of the beggining of a single vertex to this attribute
 	);
 
 	gl.vertexAttribPointer(
-		colorAttribLocation, // attribute location
-		3, // numero de elementos por attribute
+		textCoordAttribLocation, // attribute location
+		2, // numero de elementos por attribute
 		gl.FLOAT, // typo de elemetos
 		gl.FALSE,
-		6 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
+		5 * Float32Array.BYTES_PER_ELEMENT, // Size of a individual shader
 		3 * Float32Array.BYTES_PER_ELEMENT // Offset of the beggining of a single vertex to this attribute
 	);
 	gl.enableVertexAttribArray(positionAttribLocation);
-	gl.enableVertexAttribArray(colorAttribLocation);
+	gl.enableVertexAttribArray(textCoordAttribLocation);
+
+	// CREANDO BUFFER DE TEXTURA
+	var boxTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, boxTexture);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // PARA CUANDO SE SALE
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); // PARA CUANDO SOBRA ESPACIO
+
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, document.getElementById('crate-image'));// esto especifica la informacion que va a usar la textura
+	// los parametros son, la textura, el nivel de detalle, el modo de renderizado, si tiene borde, 
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
 
 	// le decimos a webgl que queremos usar ese programa(que se guarda en una variable)
 	gl.useProgram(program);
@@ -232,6 +246,10 @@ var InitDemo = function(){
 
 		gl.clearColor(0.75,0.85,0.8,1.0);
 		gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+
+		gl.bindTexture(gl.TEXTURE_2D, boxTexture);
+		gl.activeTexture(gl.TEXTURE0);
+
 		gl.drawElements(gl.TRIANGLES, boxIndices.length, gl.UNSIGNED_SHORT, 0);
 		requestAnimationFrame(loop);
 	};
